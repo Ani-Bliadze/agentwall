@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentWall Console</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z' fill='%2314f195'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0b0f17;
+    --panel: #121826;
+    --panel-2: #172033;
+    --line: #232d42;
+    --text: #e6ebf5;
+    --muted: #8b97ad;
+    --faint: #5d6a82;
+    --green: #14f195;
+    --green-bg: rgba(20, 241, 149, .1);
+    --red: #ff5c6c;
+    --red-bg: rgba(255, 92, 108, .1);
+    --amber: #ffb547;
+    --amber-bg: rgba(255, 181, 71, .12);
+    --blue: #7aa7ff;
+    --blue-bg: rgba(122, 167, 255, .12);
+    --purple: #9945ff;
+    --radius: 12px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  button { font: inherit; cursor: pointer; }
+  code, .mono { font-family: var(--mono); font-size: 12.5px; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--line); background: rgba(18, 24, 38, .7); position: sticky; top: 0; backdrop-filter: blur(8px); z-index: 5; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: .2px; }
+  .brand svg { width: 26px; height: 26px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .dot.live { background: var(--green); box-shadow: 0 0 0 3px rgba(20,241,149,.15); }
+  .spacer { flex: 1; }
+  .balances { display: flex; gap: 18px; color: var(--muted); font-size: 13px; }
+  .balances b { color: var(--text); font-weight: 600; }
+
+  main { max-width: 1320px; margin: 0 auto; padding: 22px 24px 60px; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+  .kpi .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+  .kpi .value { font-size: 26px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .kpi.green .value { color: var(--green); } .kpi.red .value { color: var(--red); } .kpi.amber .value { color: var(--amber); }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 20px; overflow: hidden; }
+  .panel > h2 { margin: 0; padding: 13px 16px; font-size: 13px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+  .panel > h2 .count { background: var(--amber-bg); color: var(--amber); border-radius: 999px; padding: 0 8px; font-size: 12px; }
+  .empty { padding: 18px 16px; color: var(--faint); }
+
+  .approval { padding: 14px 16px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; background: linear-gradient(90deg, rgba(255,181,71,.07), transparent 60%); }
+  .approval:last-child { border-bottom: 0; }
+  .approval .what { font-size: 15px; font-weight: 600; }
+  .approval .why { color: var(--amber); font-size: 13px; grid-column: 1 / 2; }
+  .approval .meta { color: var(--muted); font-size: 12px; }
+  .actions { display: flex; gap: 8px; grid-row: 1 / span 3; grid-column: 2; }
+  .btn { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); border-radius: 8px; padding: 7px 14px; font-weight: 600; }
+  .btn:hover { border-color: var(--faint); }
+  .btn.approve { background: var(--green); border-color: var(--green); color: #04130c; }
+  .btn.reject { color: var(--red); }
+  .btn.small { padding: 4px 10px; font-size: 12px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .feed .row { border-bottom: 1px solid var(--line); }
+  .feed .row:last-child { border-bottom: 0; }
+  .feed .head { display: grid; grid-template-columns: 70px 120px 1fr auto; gap: 12px; padding: 11px 16px; align-items: center; cursor: pointer; }
+  .feed .head:hover { background: var(--panel-2); }
+  .time { color: var(--faint); font-family: var(--mono); font-size: 12px; }
+  .agent { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .desc { overflow: hidden; }
+  .desc .main { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .desc .reason { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kind { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .5px; padding: 1px 6px; border-radius: 4px; margin-right: 6px; background: var(--blue-bg); color: var(--blue); vertical-align: 1px; }
+  .kind.x402 { background: rgba(153,69,255,.16); color: #c39bff; }
+  .kind.raw { background: var(--panel-2); color: var(--muted); }
+  .chip { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .chip.ok { background: var(--green-bg); color: var(--green); }
+  .chip.bad { background: var(--red-bg); color: var(--red); }
+  .chip.wait { background: var(--amber-bg); color: var(--amber); }
+  .chip.info { background: var(--blue-bg); color: var(--blue); }
+  .detail { display: none; padding: 4px 16px 14px 98px; }
+  .row.open .detail { display: block; }
+  .checks { list-style: none; margin: 6px 0 0; padding: 0; }
+  .checks li { display: grid; grid-template-columns: 20px 130px 1fr; gap: 8px; padding: 4px 0; font-size: 13px; }
+  .checks .rule { color: var(--faint); font-family: var(--mono); font-size: 12px; }
+  .ic { font-weight: 800; text-align: center; }
+  .ic.pass { color: var(--green); } .ic.deny { color: var(--red); } .ic.require_approval { color: var(--amber); } .ic.warn { color: var(--amber); }
+  .kv { color: var(--muted); font-size: 12.5px; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+  .kv b { color: var(--text); font-weight: 500; }
+
+  .agent-card { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .agent-card:last-child { border-bottom: 0; }
+  .agent-card .top { display: flex; align-items: center; gap: 10px; }
+  .agent-card .name { font-weight: 700; }
+  .agent-card .sub { color: var(--muted); font-size: 12.5px; margin: 3px 0 10px; }
+  .bar { height: 7px; background: var(--panel-2); border-radius: 99px; overflow: hidden; }
+  .bar > div { height: 100%; background: linear-gradient(90deg, var(--green), #19c2ff); border-radius: 99px; transition: width .4s; }
+  .bar.hot > div { background: linear-gradient(90deg, var(--amber), var(--red)); }
+  .limits { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tag { font-size: 11.5px; padding: 2px 8px; border-radius: 6px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+  .frozen-banner { color: var(--red); font-size: 12px; font-weight: 600; }
+
+  .audit { padding: 14px 16px; }
+  .audit .status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .audit dl { display: grid; grid-template-columns: 110px 1fr; gap: 6px 10px; margin: 12px 0; font-size: 12.5px; }
+  .audit dt { color: var(--muted); }
+  .audit dd { margin: 0; font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  .audit .log { max-height: 220px; overflow: auto; border-top: 1px solid var(--line); margin: 0 -16px -14px; }
+  .audit .log div { display: grid; grid-template-columns: 40px 1fr 74px; gap: 8px; padding: 6px 16px; font-size: 12px; border-bottom: 1px solid var(--line); color: var(--muted); }
+  .audit .log code { color: var(--faint); }
+
+  .login { max-width: 420px; margin: 12vh auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .login input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-family: var(--mono); margin: 12px 0; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--line); padding: 10px 16px; border-radius: 10px; display: none; z-index: 20; }
+
+  @media (max-width: 980px) {
+    .grid { grid-template-columns: 1fr; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .feed .head { grid-template-columns: 60px 1fr auto; }
+    .feed .agent { display: none; }
+    .detail { padding-left: 16px; }
+    .balances { display: none; }
+  }
+  @media (max-width: 560px) {
+    main { padding: 16px 12px 40px; }
+    header { padding: 12px 16px; }
+    .feed .head { grid-template-columns: 1fr auto; padding: 10px 12px; }
+    .feed .time { display: none; }
+    .approval { grid-template-columns: 1fr; }
+    .actions { grid-row: auto; grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const short = (a) => (a && a.length > 14 ? a.slice(0, 4) + '…' + a.slice(-4) : a || '');
+const money = (n) => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const time = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+let token = null;
+let state = null;
+const open = new Set();
+const SHIELD = '<svg viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14f195"/><stop offset="1" stop-color="#9945ff"/></linearGradient></defs><path d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z" fill="url(#g)"/><path d="m11 16 3.5 3.5L21.5 12" stroke="#0b0f17" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function getToken() {
+  const params = new URLSearchParams(location.search);
+  const fromUrl = params.get('token');
+  if (fromUrl) {
+    try { sessionStorage.setItem('agentwall-token', fromUrl); } catch {}
+    params.delete('token');
+    history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : ''));
+    return fromUrl;
+  }
+  try { return sessionStorage.getItem('agentwall-token'); } catch { return null; }
+}
+
+async function api(path, method = 'GET', body) {
+  const res = await fetch(path, { method, headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 401) { try { sessionStorage.removeItem('agentwall-token'); } catch {} showLogin('That token was not accepted.'); throw new Error('unauthorized'); }
+  if (!res.ok) throw new Error(json.error || res.statusText);
+  return json;
+}
+
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => (t.style.display = 'none'), 3500);
+}
+
+function showLogin(err) {
+  $('#app').innerHTML = `<div class="login"><div class="brand">${SHIELD} AgentWall</div>
+    <p style="color:var(--muted)">Paste the admin token printed when AgentWall started.</p>
+    <input id="tok" placeholder="aw_admin_…" autofocus>
+    ${err ? `<p style="color:var(--red)">${esc(err)}</p>` : ''}
+    <button class="btn approve" id="go">Open console</button></div>`;
+  $('#go').onclick = () => { token = $('#tok').value.trim(); try { sessionStorage.setItem('agentwall-token', token); } catch {} boot(); };
+}
+
+function statusChip(r) {
+  const map = {
+    executed: ['ok', r.kind === 'x402' ? 'Paid' : 'Executed'],
+    signed: ['ok', 'Signed'],
+    denied: ['bad', 'Blocked'],
+    rejected: ['bad', 'Rejected'],
+    expired: ['bad', 'Expired'],
+    failed: ['bad', 'Failed'],
+    pending_approval: ['wait', 'Needs approval'],
+  };
+  const [cls, label] = map[r.status] || ['info', r.status];
+  return `<span class="chip ${cls}">${label}</span>`;
+}
+
+function describe(r) {
+  const out = (r.decision.transfers || []).filter((t) => t.destinationLabel !== 'AgentWall wallet');
+  const text = esc(out.map((t) => `${t.amount} ${t.asset || 'unknown token'} → ${t.destinationLabel}`).join(', '));
+  if (r.kind === 'x402') return `${text || 'x402 payment'}${r.x402?.description ? ` <span style="color:var(--faint)">· ${esc(r.x402.description)}</span>` : ''}`;
+  return text || esc((r.decision.instructions || []).filter((i) => !/compute-budget|memo/.test(i)).join(', ')) || 'No outgoing transfer';
+}
+
+function explorer(sig) {
+  if (!sig || !state) return '';
+  if (state.network === 'solana-local') return `<code>${short(sig)}</code> <span style="color:var(--faint)">(local ledger)</span>`;
+  const cluster = state.network === 'solana-devnet' ? '?cluster=devnet' : '';
+  return `<a href="https://explorer.solana.com/tx/${sig}${cluster}" target="_blank" rel="noopener"><code>${short(sig)}</code> ↗</a>`;
+}
+
+const ICON = { pass: '✓', deny: '✕', require_approval: '⏸', warn: '!' };
+
+function renderRow(r) {
+  const checks = r.decision.checks.map((c) => `<li><span class="ic ${c.outcome}">${ICON[c.outcome]}</span><span class="rule">${esc(c.rule)}</span><span>${esc(c.message)}</span></li>`).join('');
+  return `<div class="row ${open.has(r.id) ? 'open' : ''}" data-id="${r.id}">
+    <div class="head">
+      <span class="time">${time(r.createdAt)}</span>
+      <span class="agent">${esc(r.agentId)}</span>
+      <div class="desc"><div class="main"><span class="kind ${r.kind}">${r.kind.toUpperCase()}</span>${describe(r)}</div>
+        <div class="reason">${esc(r.error || r.decision.reason)}</div></div>
+      ${statusChip(r)}
+    </div>
+    <div class="detail">
+      ${r.purpose ? `<div class="kv"><span>Agent's stated purpose: <b>${esc(r.purpose)}</b></span></div>` : ''}
+      <ul class="checks">${checks}</ul>
+      <div class="kv">
+        <span>Request <b class="mono">${r.id}</b></span>
+        <span>Value <b>${money(r.decision.totalUsd)}</b></span>
+        ${r.x402?.url ? `<span>URL <b class="mono">${esc(r.x402.url)}</b></span>` : ''}
+        ${r.signature ? `<span>Tx ${explorer(r.signature)}</span>` : ''}
+        ${r.approval?.resolvedBy ? `<span>Decided by <b>${esc(r.approval.resolvedBy)}</b></span>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderApproval(r) {
+  return `<div class="approval">
+    <div class="what">${describe(r)}</div>
+    <div class="actions">
+      <button class="btn reject" data-reject="${r.id}">Reject</button>
+      <button class="btn approve" data-approve="${r.id}">Approve &amp; sign</button>
+    </div>
+    <div class="why">${esc(r.decision.reason.replace(/^Needs human approval: /, ''))}</div>
+    <div class="meta">${esc(r.agentId)} · ${money(r.decision.totalUsd)} · ${r.purpose ? `“${esc(r.purpose)}” · ` : ''}expires ${time(r.approval.expiresAt)}</div>
+  </div>`;
+}
+
+function renderAgent(a) {
+  const pct = Math.min(100, (a.spentLast24hUsd / a.limits.dailyUsd) * 100);
+  const frozen = a.status === 'frozen';
+  return `<div class="agent-card">
+    <div class="top"><span class="name">${esc(a.id)}</span>
+      <span class="chip ${frozen ? 'bad' : 'ok'}">${frozen ? 'Frozen' : 'Active'}</span>
+      <span class="spacer"></span>
+      <button class="btn small ${frozen ? '' : 'reject'}" data-freeze="${a.id}" data-to="${frozen ? 'unfreeze' : 'freeze'}">${frozen ? 'Unfreeze' : 'Freeze'}</button></div>
+    <div class="sub">${esc(a.description)}</div>
+    <div class="bar ${pct > 80 ? 'hot' : ''}"><div style="width:${pct}%"></div></div>
+    <div class="limits"><span>${money(a.spentLast24hUsd)} of ${money(a.limits.dailyUsd)} today</span><span>${money(a.limits.perTransactionUsd)}/tx${a.approvalAboveUsd != null ? ` · human above ${money(a.approvalAboveUsd)}` : ''}</span></div>
+    <div class="tags">
+      ${a.assets.map((s) => `<span class="tag">${esc(s)}</span>`).join('')}
+      ${a.destinations.map((d) => `<span class="tag" title="${esc(d.address)}">→ ${esc(d.label)}</span>`).join('')}
+      ${a.merchants.map((m) => `<span class="tag" title="${esc(m.urlPrefix)}">x402 · ${esc(m.name)} ≤ ${money(m.maxPriceUsd)}</span>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderAudit(a) {
+  const v = a.verification;
+  return `<div class="audit">
+    <div class="status">${v.ok ? '<span class="chip ok">Chain verified</span>' : `<span class="chip bad">Chain broken at #${v.brokenAt}</span>`}<span class="spacer"></span>
+      <button class="btn small" id="anchor">Anchor to Solana</button></div>
+    <dl>
+      <dt>Entries</dt><dd>${a.length}</dd>
+      <dt>Head hash</dt><dd>${a.head}</dd>
+      <dt>Last anchor</dt><dd>${a.lastAnchor ? `#${a.lastAnchor.seq} · ${explorer(a.lastAnchor.signature)}` : '<span style="color:var(--faint)">not anchored yet</span>'}</dd>
+    </dl>
+    <div class="log" id="auditlog"></div>
+  </div>`;
+}
+
+async function loadAuditLog() {
+  try {
+    const { entries } = await api('/admin/audit?limit=40');
+    const el = $('#auditlog');
+    if (el) el.innerHTML = entries.map((e) => `<div><span>#${e.seq}</span><span>${esc(e.type)}${e.agentId ? ' · ' + esc(e.agentId) : ''}</span><code>${e.hash.slice(0, 8)}</code></div>`).join('');
+  } catch {}
+}
+
+function render() {
+  const s = state;
+  const pending = s.requests.filter((r) => r.status === 'pending_approval');
+  const bal = s.balances.map((b) => `<span>${esc(b.asset)} <b>${Number(b.amount).toLocaleString('en-US', { maximumFractionDigits: 4 })}</b></span>`).join('');
+  $('#app').innerHTML = `
+  <header>
+    <div class="brand">${SHIELD} AgentWall</div>
+    <span class="pill"><span class="dot live" id="live"></span>${esc(s.network)} · ${esc(s.ledger)} ledger</span>
+    <span class="pill" title="${esc(s.wallet)}">Wallet <code>${short(s.wallet)}</code></span>
+    <span class="spacer"></span>
+    <div class="balances">${bal}</div>
+  </header>
+  <main>
+    <div class="kpis">
+      <div class="kpi green"><div class="label">Allowed</div><div class="value">${s.stats.allowed}</div></div>
+      <div class="kpi red"><div class="label">Blocked</div><div class="value">${s.stats.blocked}</div></div>
+      <div class="kpi amber"><div class="label">Awaiting approval</div><div class="value">${s.stats.pending}</div></div>
+      <div class="kpi"><div class="label">Spent (24h)</div><div class="value">${money(s.stats.spentLast24hUsd)}</div></div>
+    </div>
+    <div class="grid">
+      <div>
+        <section class="panel"><h2>Needs your approval ${pending.length ? `<span class="count">${pending.length}</span>` : ''}</h2>
+          ${pending.length ? pending.map(renderApproval).join('') : '<div class="empty">Nothing waiting. Payments above an agent\'s threshold will show up here.</div>'}
+        </section>
+        <section class="panel feed"><h2>Live activity</h2>
+          ${s.requests.length ? s.requests.map(renderRow).join('') : '<div class="empty">No agent activity yet. Run <code>npm run demo</code> to see AgentWall in action.</div>'}
+        </section>
+      </div>
+      <div>
+        <section class="panel"><h2>Agents</h2>${s.agents.map(renderAgent).join('')}</section>
+        <section class="panel"><h2>Audit trail</h2>${renderAudit(s.audit)}</section>
+      </div>
+    </div>
+  </main>`;
+  loadAuditLog();
+}
+
+async function refresh() {
+  state = await api('/admin/state');
+  render();
+}
+
+let refreshTimer = null;
+function scheduleRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => refresh().catch(() => {}), 120);
+}
+
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('button, .head');
+  if (!t) return;
+  try {
+    if (t.dataset.approve) {
+      t.disabled = true;
+      const r = await api(`/admin/approvals/${t.dataset.approve}/approve`, 'POST', { by: 'console' });
+      toast(r.status === 'executed' || r.status === 'signed' ? 'Approved and signed.' : `Re-check failed: ${r.decision.reason}`);
+    } else if (t.dataset.reject) {
+      t.disabled = true;
+      await api(`/admin/approvals/${t.dataset.reject}/reject`, 'POST', { by: 'console' });
+      toast('Rejected. The agent has been told.');
+    } else if (t.dataset.freeze) {
+      await api(`/admin/agents/${t.dataset.freeze}/${t.dataset.to}`, 'POST', { by: 'console' });
+      toast(t.dataset.to === 'freeze' ? `${t.dataset.freeze} is frozen. All its payments will be blocked.` : `${t.dataset.freeze} is active again.`);
+    } else if (t.id === 'anchor') {
+      t.disabled = true;
+      const a = await api('/admin/audit/anchor', 'POST');
+      toast(`Audit head #${a.seq} anchored in a Solana memo.`);
+    } else if (t.classList.contains('head')) {
+      const row = t.closest('.row');
+      const id = row.dataset.id;
+      open.has(id) ? open.delete(id) : open.add(id);
+      row.classList.toggle('open');
+      return;
+    } else return;
+    await refresh();
+  } catch (err) {
+    if (err.message !== 'unauthorized') toast(err.message);
+  }
+});
+
+function connect() {
+  const es = new EventSource('/admin/events?token=' + encodeURIComponent(token));
+  es.addEventListener('request', scheduleRefresh);
+  es.addEventListener('agents', scheduleRefresh);
+  es.addEventListener('audit', scheduleRefresh);
+  es.onerror = () => { const d = $('#live'); if (d) d.classList.remove('live'); };
+  es.onopen = () => { const d = $('#live'); if (d) d.classList.add('live'); };
+}
+
+async function boot() {
+  token = token || getToken();
+  if (!token) return showLogin();
+  try {
+    await refresh();
+    connect();
+  } catch (e) {
+    if (e.message !== 'unauthorized') showLogin(e.message);
+  }
+}
+boot();
+</script>
+</body>
+</html>
