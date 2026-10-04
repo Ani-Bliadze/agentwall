@@ -1,0 +1,49 @@
+{
+  "name": "agentwall",
+  "version": "0.1.0",
+  "description": "A security and policy layer for autonomous AI agents that spend money on Solana. Every payment is checked against policy before AgentWall signs it.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "tsx src/cli/server.ts",
+    "demo": "tsx examples/demo-agent.ts",
+    "demo:interactive": "tsx examples/demo-agent.ts --interactive",
+    "agent:llm": "tsx examples/llm-agent.ts",
+    "audit:verify": "tsx src/cli/audit-verify.ts",
+    "keygen": "tsx src/cli/keygen.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "solana",
+    "ai-agents",
+    "x402",
+    "usdc",
+    "security",
+    "policy-engine",
+    "agentic-payments"
+  ],
+  "dependencies": {
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.99.0",
+    "bs58": "^6.0.0",
+    "express": "^5.2.1",
+    "zod": "^4.6.5"
+  },
+  "optionalDependencies": {
+    "@anthropic-ai/sdk": "^0.131.0"
+  },
+  "devDependencies": {
+    "@solana/kit": "^8.4.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.5",
+    "litesvm": "^1.5.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  }
+}
