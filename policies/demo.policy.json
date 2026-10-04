@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "assets": {
+    "USDC": {
+      "decimals": 6,
+      "usdPrice": 1,
+      "mints": {
+        "solana-local": "6vqLQnhREtEWACNqBnYgEHpFnsKb25w3aNxMDm5c4ttu",
+        "solana-devnet": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+        "solana": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      }
+    },
+    "SOL": {
+      "decimals": 9,
+      "usdPrice": 150,
+      "native": true
+    }
+  },
+  "global": {
+    "denyDestinations": [
+      { "address": "3r1x57Zei6YBLZsWWkPZodBziA8K1hEPHqTkubsgiYYu", "label": "Known drainer (threat feed)" }
+    ]
+  },
+  "agents": {
+    "research-agent": {
+      "description": "Buys data from paid APIs over x402 and pays approved vendors.",
+      "limits": {
+        "perTransactionUsd": 250,
+        "dailyUsd": 500,
+        "maxTransactionsPerMinute": 30
+      },
+      "approval": {
+        "aboveUsd": 100,
+        "unknownDestinations": "deny",
+        "timeoutSeconds": 900
+      },
+      "assets": ["USDC"],
+      "destinations": {
+        "allow": [
+          { "address": "6V1WF7eXeJgG9t59njK8ufHU1hTuAuxrT49bYGHrhTx7", "label": "Acme Cloud" },
+          { "address": "E6yku3p7GSWF3uNiGLATN2hbS2P2eixzKyC4PwVUp2Ef", "label": "DataLabs" }
+        ]
+      },
+      "x402": {
+        "enabled": true,
+        "maxPriceUsd": 1,
+        "merchants": [
+          {
+            "name": "Tbilisi Weather API",
+            "urlPrefix": "http://localhost:8787/demo/weather/",
+            "payTo": "7psaDKwxWrAfRrdgboKAZA9Mbq5Ybs5c6v95UjWeZhw2",
+            "maxPriceUsd": 0.1
+          }
+        ]
+      },
+      "dlp": {
+        "block": ["solana_private_key", "seed_phrase", "evm_private_key", "api_key", "jwt", "password", "credit_card"],
+        "requireApproval": ["iban"]
+      }
+    },
+    "ops-agent": {
+      "description": "Small operational payments. Unknown recipients go to a human.",
+      "limits": {
+        "perTransactionUsd": 20,
+        "dailyUsd": 50,
+        "maxTransactionsPerMinute": 5
+      },
+      "approval": {
+        "aboveUsd": 10,
+        "unknownDestinations": "require_approval"
+      },
+      "assets": ["USDC", "SOL"],
+      "destinations": {
+        "allow": [
+          { "address": "6V1WF7eXeJgG9t59njK8ufHU1hTuAuxrT49bYGHrhTx7", "label": "Acme Cloud" }
+        ]
+      },
+      "x402": {
+        "enabled": false
+      }
+    }
+  }
+}
